@@ -6,13 +6,5 @@
 
 cmake_minimum_required(VERSION 3.6)
 
-project(UpScalerPlugins)
-
-set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-configure_file(cmake/config.h.in configs/config.h @ONLY)
-
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/configs)
-
-add_subdirectory(gst)
+add_subdirectory(interpolator)
+add_subdirectory(upscaler)
