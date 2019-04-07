@@ -9,9 +9,7 @@ project(upscaler)
 set(TARGET_NAME "gstinterpolator")
 
 find_package(PkgConfig REQUIRED)
-
 pkg_check_modules(GSTREAMER gstreamer-1.0 REQUIRED)
-
 
 set(PROJECT_SOURCES
     gstinterpolator.c
