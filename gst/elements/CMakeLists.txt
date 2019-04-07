@@ -6,4 +6,5 @@
 
 cmake_minimum_required(VERSION 3.6)
 
-add_subdirectory(elements)
+add_subdirectory(interpolator)
+add_subdirectory(upscaler)

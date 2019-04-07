@@ -40,6 +40,7 @@ struct _GstInterpolatorClass
   GstElementClass parent_class;
 };
 
+/* Standard function returning type information. */
 GType gst_interpolator_get_type (void);
 
 G_END_DECLS

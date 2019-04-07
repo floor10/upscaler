@@ -5,12 +5,19 @@
  ******************************************************************************/
 
 #ifdef HAVE_CONFIG_H
-#  include <config.h>
+#include <config.h>
 #endif
 
 #include <gst/gst.h>
-
 #include "gstinterpolator.h"
+
+#define ELEMENT_NAME "interpolator"
+// FIXME: think about description
+#define ELEMENT_LONG_NAME ""
+#define ELEMENT_BRIEF_DESCRIPTION ""
+
+#define GST_VIDEO_SRC_CAPS GST_VIDEO_CAPS_MAKE("{ BGR, BGRx, BGRA }")
+#define GST_VIDEO_SINK_CAPS GST_VIDEO_CAPS_MAKE("{ BGR, BGRx, BGRA }")
 
 GST_DEBUG_CATEGORY_STATIC (gst_interpolator_debug);
 #define GST_CAT_DEFAULT gst_interpolator_debug
@@ -35,13 +42,13 @@ enum
 static GstStaticPadTemplate sink_factory = GST_STATIC_PAD_TEMPLATE ("sink",
     GST_PAD_SINK,
     GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("ANY")
+    GST_VIDEO_SINK_CAPS
     );
 
 static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("ANY")
+    GST_VIDEO_SRC_CAPS
     );
 
 #define gst_interpolator_parent_class parent_class
@@ -74,11 +81,11 @@ gst_interpolator_class_init (GstInterpolatorClass * klass)
       g_param_spec_boolean ("silent", "Silent", "Produce verbose output ?",
           FALSE, G_PARAM_READWRITE));
 
-  gst_element_class_set_details_simple(gstelement_class,
-    "Interpolator",
-    "FIXME:Generic",
-    "FIXME:Generic Template Element",
-    " <<user@hostname.org>>");
+  gst_element_class_set_static_metadata(gstelement_class,
+    ELEMENT_LONG_NAME,
+    "Video",
+    ELEMENT_BRIEF_DESCRIPTION,
+    "https://github.com/floor10");
 
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&src_factory));
@@ -92,21 +99,21 @@ gst_interpolator_class_init (GstInterpolatorClass * klass)
  * initialize instance structure
  */
 static void
-gst_interpolator_init (GstInterpolator * filter)
+gst_interpolator_init (GstInterpolator * interpolator)
 {
-  filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
-  gst_pad_set_event_function (filter->sinkpad,
+  interpolator->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
+  gst_pad_set_event_function (interpolator->sinkpad,
                               GST_DEBUG_FUNCPTR(gst_interpolator_sink_event));
-  gst_pad_set_chain_function (filter->sinkpad,
+  gst_pad_set_chain_function (interpolator->sinkpad,
                               GST_DEBUG_FUNCPTR(gst_interpolator_chain));
-  GST_PAD_SET_PROXY_CAPS (filter->sinkpad);
-  gst_element_add_pad (GST_ELEMENT (filter), filter->sinkpad);
+  GST_PAD_SET_PROXY_CAPS (interpolator->sinkpad);
+  gst_element_add_pad (GST_ELEMENT (interpolator), interpolator->sinkpad);
 
-  filter->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
-  GST_PAD_SET_PROXY_CAPS (filter->srcpad);
-  gst_element_add_pad (GST_ELEMENT (filter), filter->srcpad);
+  interpolator->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
+  GST_PAD_SET_PROXY_CAPS (interpolator->srcpad);
+  gst_element_add_pad (GST_ELEMENT (interpolator), interpolator->srcpad);
 
-  filter->silent = FALSE;
+  interpolator->silent = FALSE;
 }
 
 static void
@@ -190,47 +197,3 @@ gst_interpolator_chain (GstPad * pad, GstObject * parent, GstBuffer * buf)
   /* just push out the incoming buffer without touching it */
   return gst_pad_push (filter->srcpad, buf);
 }
-
-
-/* entry point to initialize the plug-in
- * initialize the plug-in itself
- * register the element factories and other features
- */
-static gboolean
-interpolator_init (GstPlugin * interpolator)
-{
-  /* debug category for fltering log messages
-   *
-   * exchange the string 'Template interpolator' with your description
-   */
-  GST_DEBUG_CATEGORY_INIT (gst_interpolator_debug, "interpolator",
-      0, "Template interpolator");
-
-  return gst_element_register (interpolator, "interpolator", GST_RANK_NONE,
-      GST_TYPE_INTERPOLATOR);
-}
-
-/* PACKAGE: this is usually set by autotools depending on some _INIT macro
- * in configure.ac and then written into and defined in config.h, but we can
- * just set it ourselves here in case someone doesn't use autotools to
- * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
- */
-#ifndef PACKAGE
-#define PACKAGE "myfirstinterpolator"
-#endif
-
-/* gstreamer looks for this structure to register interpolators
- *
- * exchange the string 'Template interpolator' with your interpolator description
- */
-GST_PLUGIN_DEFINE (
-    GST_VERSION_MAJOR,
-    GST_VERSION_MINOR,
-    interpolator,
-    "Template interpolator",
-    interpolator_init,
-    VERSION,
-    "LGPL",
-    "GStreamer",
-    "http://gstreamer.net/"
-)
