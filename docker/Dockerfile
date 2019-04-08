@@ -15,7 +15,8 @@ RUN apt update \
             libgstreamer-plugins-bad1.0-dev \
             gstreamer1.0-plugins-ugly-dbg \
             gstreamer1.0-libav-dbg \
-            python3-gst-1.0-dbg
+            python3-gst-1.0-dbg \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . /usr/share/sources/upscaler
 
