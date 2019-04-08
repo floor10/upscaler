@@ -22,6 +22,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
         apt-get install -y --no-install-recommends \
             gstreamer1.0-tools \
+            libopencv-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /usr/share/sources/upscaler
@@ -29,3 +30,5 @@ COPY . /usr/share/sources/upscaler
 WORKDIR /usr/share/sources/upscaler
 
 RUN mkdir build && cd build && cmake .. && make -j $(nproc)
+
+ENV GST_PLUGIN_PATH=/usr/share/sources/upscaler/build/gst/elements/
