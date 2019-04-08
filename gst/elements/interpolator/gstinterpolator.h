@@ -8,6 +8,8 @@
 #define __GST_INTERPOLATOR_H__
 
 #include <gst/gst.h>
+#include <gst/video/video.h>
+#include <gst/video/gstvideofilter.h>
 
 G_BEGIN_DECLS
 

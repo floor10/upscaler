@@ -4,11 +4,6 @@
  * SPDX-License-Identifier: MIT
  ******************************************************************************/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include <gst/gst.h>
 #include "gstinterpolator.h"
 
 #define ELEMENT_NAME "interpolator"
@@ -35,22 +30,6 @@ enum
   PROP_SILENT
 };
 
-/* the capabilities of the inputs and outputs.
- *
- * describe the real formats here.
- */
-static GstStaticPadTemplate sink_factory = GST_STATIC_PAD_TEMPLATE ("sink",
-    GST_PAD_SINK,
-    GST_PAD_ALWAYS,
-    GST_VIDEO_SINK_CAPS
-    );
-
-static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
-    GST_PAD_SRC,
-    GST_PAD_ALWAYS,
-    GST_VIDEO_SRC_CAPS
-    );
-
 #define gst_interpolator_parent_class parent_class
 G_DEFINE_TYPE (GstInterpolator, gst_interpolator, GST_TYPE_ELEMENT);
 
@@ -59,20 +38,15 @@ static void gst_interpolator_set_property (GObject * object, guint prop_id,
 static void gst_interpolator_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-static gboolean gst_interpolator_sink_event (GstPad * pad, GstObject * parent, GstEvent * event);
-static GstFlowReturn gst_interpolator_chain (GstPad * pad, GstObject * parent, GstBuffer * buf);
+static GstFlowReturn gst_interpolator_transform_frame(GstVideoFilter *filter,
+                                                     GstVideoFrame *in, 
+                                                     GstVideoFrame *out);
 
-/* GObject vmethod implementations */
-
-/* initialize the interpolator's class */
-static void
-gst_interpolator_class_init (GstInterpolatorClass * klass)
+static void gst_interpolator_class_init (GstInterpolatorClass *klass)
 {
-  GObjectClass *gobject_class;
-  GstElementClass *gstelement_class;
-
-  gobject_class = (GObjectClass *) klass;
-  gstelement_class = (GstElementClass *) klass;
+  GObjectClass *gobject_class = (GObjectClass *) klass;;
+  GstElementClass *gstelement_class = (GstElementClass *) klass;
+  GstVideoFilterClass *filter_class = (GstVideoFilterClass *) klass;
 
   gobject_class->set_property = gst_interpolator_set_property;
   gobject_class->get_property = gst_interpolator_get_property;
@@ -87,32 +61,16 @@ gst_interpolator_class_init (GstInterpolatorClass * klass)
     ELEMENT_BRIEF_DESCRIPTION,
     "https://github.com/floor10");
 
-  gst_element_class_add_pad_template (gstelement_class,
-      gst_static_pad_template_get (&src_factory));
-  gst_element_class_add_pad_template (gstelement_class,
-      gst_static_pad_template_get (&sink_factory));
+  gst_element_class_add_pad_template(gstelement_class, gst_pad_template_new("src", GST_PAD_SRC, GST_PAD_ALWAYS,
+      gst_caps_from_string(GST_VIDEO_SRC_CAPS)));
+  gst_element_class_add_pad_template(gstelement_class, gst_pad_template_new("sink", GST_PAD_SINK, GST_PAD_ALWAYS,
+      gst_caps_from_string(GST_VIDEO_SINK_CAPS)));
+
+  filter_class->transform_frame = GST_DEBUG_FUNCPTR(gst_interpolator_transform_frame);
 }
 
-/* initialize the new element
- * instantiate pads and add them to element
- * set pad calback functions
- * initialize instance structure
- */
-static void
-gst_interpolator_init (GstInterpolator * interpolator)
+static void gst_interpolator_init(GstInterpolator * interpolator)
 {
-  interpolator->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
-  gst_pad_set_event_function (interpolator->sinkpad,
-                              GST_DEBUG_FUNCPTR(gst_interpolator_sink_event));
-  gst_pad_set_chain_function (interpolator->sinkpad,
-                              GST_DEBUG_FUNCPTR(gst_interpolator_chain));
-  GST_PAD_SET_PROXY_CAPS (interpolator->sinkpad);
-  gst_element_add_pad (GST_ELEMENT (interpolator), interpolator->sinkpad);
-
-  interpolator->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
-  GST_PAD_SET_PROXY_CAPS (interpolator->srcpad);
-  gst_element_add_pad (GST_ELEMENT (interpolator), interpolator->srcpad);
-
   interpolator->silent = FALSE;
 }
 
@@ -148,52 +106,10 @@ gst_interpolator_get_property (GObject * object, guint prop_id,
   }
 }
 
-/* GstElement vmethod implementations */
-
-/* this function handles sink events */
-static gboolean
-gst_interpolator_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
+static GstFlowReturn gst_interpolator_transform_frame (GstVideoFilter * filter,
+    GstVideoFrame * in_frame, GstVideoFrame * out_frame)
 {
-  GstInterpolator *filter;
-  gboolean ret;
+  GstFlowReturn ret = GST_FLOW_OK;
 
-  filter = GST_INTERPOLATOR (parent);
-
-  GST_LOG_OBJECT (filter, "Received %s event: %" GST_PTR_FORMAT,
-      GST_EVENT_TYPE_NAME (event), event);
-
-  switch (GST_EVENT_TYPE (event)) {
-    case GST_EVENT_CAPS:
-    {
-      GstCaps * caps;
-
-      gst_event_parse_caps (event, &caps);
-      /* do something with the caps */
-
-      /* and forward */
-      ret = gst_pad_event_default (pad, parent, event);
-      break;
-    }
-    default:
-      ret = gst_pad_event_default (pad, parent, event);
-      break;
-  }
   return ret;
-}
-
-/* chain function
- * this function does the actual processing
- */
-static GstFlowReturn
-gst_interpolator_chain (GstPad * pad, GstObject * parent, GstBuffer * buf)
-{
-  GstInterpolator *filter;
-
-  filter = GST_INTERPOLATOR (parent);
-
-  if (filter->silent == FALSE)
-    g_print ("I'm plugged, therefore I'm in.\n");
-
-  /* just push out the incoming buffer without touching it */
-  return gst_pad_push (filter->srcpad, buf);
 }

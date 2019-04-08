@@ -1,8 +1,8 @@
 FROM ubuntu:18.04
 
-RUN apt update \
+RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
-        apt install -y --no-install-recommends \
+        apt-get install -y --no-install-recommends \
             build-essential \
             cmake \
             pkg-config \
