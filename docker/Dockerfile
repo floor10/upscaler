@@ -18,6 +18,12 @@ RUN apt-get update \
             python3-gst-1.0-dbg \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive \
+        apt-get install -y --no-install-recommends \
+            gstreamer1.0-tools \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY . /usr/share/sources/upscaler
 
 WORKDIR /usr/share/sources/upscaler
