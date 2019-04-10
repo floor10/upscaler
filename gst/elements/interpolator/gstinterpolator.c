@@ -8,8 +8,9 @@
 
 #define ELEMENT_NAME "interpolator"
 // FIXME: think about description
-#define ELEMENT_LONG_NAME ""
-#define ELEMENT_BRIEF_DESCRIPTION ""
+#define ELEMENT_LONG_NAME "Interpolator long name without it plugin won't load"
+#define ELEMENT_BRIEF_DESCRIPTION \
+    "The same is truth about its description... Who the hell thought that it is good idea?"
 
 #define GST_VIDEO_SRC_CAPS GST_VIDEO_CAPS_MAKE("{ BGR, BGRx, BGRA }")
 #define GST_VIDEO_SINK_CAPS GST_VIDEO_CAPS_MAKE("{ BGR, BGRx, BGRA }")
@@ -39,7 +40,7 @@ static void gst_interpolator_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
 static GstFlowReturn gst_interpolator_transform_frame(GstVideoFilter *filter,
-                                                     GstVideoFrame *in, 
+                                                     GstVideoFrame *in,
                                                      GstVideoFrame *out);
 
 static void gst_interpolator_class_init (GstInterpolatorClass *klass)

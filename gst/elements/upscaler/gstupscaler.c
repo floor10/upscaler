@@ -14,8 +14,9 @@
 
 #define ELEMENT_NAME "upscaler"
 // FIXME: think about description
-#define ELEMENT_LONG_NAME ""
-#define ELEMENT_BRIEF_DESCRIPTION ""
+#define ELEMENT_LONG_NAME "Upscaler long name without it plugin won't load"
+#define ELEMENT_BRIEF_DESCRIPTION \
+    "The same is truth about its description... Who the hell thought that it is good idea?"
 
 GST_DEBUG_CATEGORY_STATIC(gst_up_scaler_debug);
 #define GST_CAT_DEFAULT gst_up_scaler_debug

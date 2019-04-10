@@ -8,29 +8,20 @@
 #include "config.h"
 #endif
 
-#include <gst/gst.h>
 #include "gstinterpolator.h"
 #include "gstupscaler.h"
 
-static gboolean plugins_init(GstPlugin *plugin)
-{
+#include <gst/gst.h>
+
+static gboolean plugins_init(GstPlugin *plugin) {
     if (!gst_element_register(plugin, "interpolator", GST_RANK_NONE, GST_TYPE_INTERPOLATOR))
-      return FALSE;
+        return FALSE;
 
     if (!gst_element_register(plugin, "upscaler", GST_RANK_NONE, GST_TYPE_UPSCALER))
-      return FALSE;
+        return FALSE;
 
     return TRUE;
 }
 
-GST_PLUGIN_DEFINE(
-    GST_VERSION_MAJOR,
-    GST_VERSION_MINOR,
-    gstsuperesolution,
-    "Super scaling elemenets",
-    plugins_init,
-    PLUGINS_VERSION,
-    PLUGINS_LICENSE,
-    PACKAGE_NAME,
-    GST_PACKAGE_ORIGIN
-)
+GST_PLUGIN_DEFINE(GST_VERSION_MAJOR, GST_VERSION_MINOR, superesolution, "Super scaling elemenets", plugins_init,
+                  PLUGINS_VERSION, PLUGINS_LICENSE, PACKAGE_NAME, GST_PACKAGE_ORIGIN)
