@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MIT
 # ==============================================================================
 
-project(upscaler)
+cmake_minimum_required(VERSION 3.6)
 
 set(TARGET_NAME "gstsuperesolution")
 
