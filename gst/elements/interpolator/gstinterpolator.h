@@ -9,7 +9,7 @@
 
 #include <gst/gst.h>
 #include <gst/video/video.h>
-#include <gst/video/gstvideofilter.h>
+#include <gst/base/gstbasetransform.h>
 
 G_BEGIN_DECLS
 
@@ -30,9 +30,11 @@ typedef struct _GstInterpolatorClass GstInterpolatorClass;
 
 struct _GstInterpolator
 {
-  GstElement element;
+  GstBaseTransform base_interpolator;
 
   GstPad *sinkpad, *srcpad;
+  GstVideoInfo *input_video_info;
+  GstVideoInfo *output_video_info;
 
   gboolean silent;
 };

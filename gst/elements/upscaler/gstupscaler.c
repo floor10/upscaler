@@ -12,7 +12,6 @@
 
 #include "gstupscaler.h"
 
-#define ELEMENT_NAME "upscaler"
 // FIXME: think about description
 #define ELEMENT_LONG_NAME "Upscaler long name without it plugin won't load"
 #define ELEMENT_BRIEF_DESCRIPTION \

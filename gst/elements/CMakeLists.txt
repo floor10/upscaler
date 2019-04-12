@@ -13,6 +13,7 @@ pkg_check_modules(GSTREAMER gstreamer-1.0 REQUIRED)
 
 file(GLOB PROJECT_SOURCES
     interpolator/*.c
+    interpolator/*.cpp
     upscaler/*.c
     gstelements.c
 )

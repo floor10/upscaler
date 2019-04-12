@@ -5,8 +5,9 @@
  ******************************************************************************/
 
 #include "gstinterpolator.h"
+#include "methods.h"
 
-#define ELEMENT_NAME "interpolator"
+
 // FIXME: think about description
 #define ELEMENT_LONG_NAME "Interpolator long name without it plugin won't load"
 #define ELEMENT_BRIEF_DESCRIPTION \
@@ -31,23 +32,27 @@ enum
   PROP_SILENT
 };
 
-#define gst_interpolator_parent_class parent_class
-G_DEFINE_TYPE (GstInterpolator, gst_interpolator, GST_TYPE_ELEMENT);
+G_DEFINE_TYPE_WITH_CODE(GstInterpolator, gst_interpolator, GST_TYPE_BASE_TRANSFORM,
+                        GST_DEBUG_CATEGORY_INIT(gst_interpolator_debug, "interpolator", 0,
+                                                "Debug category of interpolator element"));
 
 static void gst_interpolator_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
 static void gst_interpolator_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-static GstFlowReturn gst_interpolator_transform_frame(GstVideoFilter *filter,
-                                                     GstVideoFrame *in,
-                                                     GstVideoFrame *out);
+/* caps handling */
+static gboolean gst_interpolator_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps);
 
-static void gst_interpolator_class_init (GstInterpolatorClass *klass)
+/* frame output */
+static GstFlowReturn gst_interpolator_transform(GstBaseTransform *transform, GstBuffer *in_buffer, GstBuffer *out_buffer);
+
+/* interpolator class initialization */
+static void gst_interpolator_class_init(GstInterpolatorClass *klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;;
   GstElementClass *gstelement_class = (GstElementClass *) klass;
-  GstVideoFilterClass *filter_class = (GstVideoFilterClass *) klass;
+  GstBaseTransformClass *base_transform_class = (GstBaseTransformClass *) klass;
 
   gobject_class->set_property = gst_interpolator_set_property;
   gobject_class->get_property = gst_interpolator_get_property;
@@ -57,21 +62,24 @@ static void gst_interpolator_class_init (GstInterpolatorClass *klass)
           FALSE, G_PARAM_READWRITE));
 
   gst_element_class_set_static_metadata(gstelement_class,
-    ELEMENT_LONG_NAME,
-    "Video",
-    ELEMENT_BRIEF_DESCRIPTION,
-    "https://github.com/floor10");
+                                        ELEMENT_LONG_NAME,
+                                        "Video",
+                                        ELEMENT_BRIEF_DESCRIPTION,
+                                        "https://github.com/floor10");
 
   gst_element_class_add_pad_template(gstelement_class, gst_pad_template_new("src", GST_PAD_SRC, GST_PAD_ALWAYS,
       gst_caps_from_string(GST_VIDEO_SRC_CAPS)));
   gst_element_class_add_pad_template(gstelement_class, gst_pad_template_new("sink", GST_PAD_SINK, GST_PAD_ALWAYS,
       gst_caps_from_string(GST_VIDEO_SINK_CAPS)));
 
-  filter_class->transform_frame = GST_DEBUG_FUNCPTR(gst_interpolator_transform_frame);
+  base_transform_class->set_caps = GST_DEBUG_FUNCPTR(gst_interpolator_set_caps);
+  base_transform_class->transform = GST_DEBUG_FUNCPTR(gst_interpolator_transform);
 }
 
 static void gst_interpolator_init(GstInterpolator * interpolator)
 {
+  interpolator->input_video_info = gst_video_info_new();
+  interpolator->output_video_info = gst_video_info_new();
   interpolator->silent = FALSE;
 }
 
@@ -107,10 +115,23 @@ gst_interpolator_get_property (GObject * object, guint prop_id,
   }
 }
 
-static GstFlowReturn gst_interpolator_transform_frame (GstVideoFilter * filter,
-    GstVideoFrame * in_frame, GstVideoFrame * out_frame)
-{
-  GstFlowReturn ret = GST_FLOW_OK;
+static gboolean gst_interpolator_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps) {
+    GstInterpolator *interpolator = GST_INTERPOLATOR(transform);
+    GST_DEBUG_OBJECT(interpolator, "Caps setting in the process");
 
-  return ret;
+    if (!gst_video_info_from_caps(interpolator->input_video_info, in_caps) || !gst_video_info_from_caps(interpolator->output_video_info, out_caps))
+    {
+      GST_ERROR_OBJECT(interpolator, "Caps are invalid");
+      return FALSE;
+    }
+
+    return TRUE;
+}
+
+static GstFlowReturn gst_interpolator_transform(GstBaseTransform *transform, GstBuffer *in_buffer, GstBuffer *out_buffer)
+{  
+  GstInterpolator *interpolator = GST_INTERPOLATOR(transform);
+  GST_DEBUG_OBJECT(interpolator, "Buffers transforming in the process");
+
+  return opencv_resize(interpolator, in_buffer, out_buffer);
 }
