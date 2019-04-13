@@ -8,8 +8,10 @@ cmake_minimum_required(VERSION 3.6)
 
 set(TARGET_NAME "gstsuperesolution")
 
+find_package(OpenCV REQUIRED core imgproc)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTREAMER gstreamer-1.0 REQUIRED)
+pkg_check_modules(GSTVIDEO gstreamer-video-1.0 REQUIRED)
 
 file(GLOB PROJECT_SOURCES
     interpolator/*.c
@@ -29,6 +31,7 @@ add_library(${TARGET_NAME} SHARED ${PROJECT_SOURCES} ${PROJECT_HEADERS})
 target_include_directories(${TARGET_NAME}
 PRIVATE
         ${GSTREAMER_INCLUDE_DIRS}
+        ${GSTVIDEO_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}
         interpolator
         upscaler
@@ -36,5 +39,7 @@ PRIVATE
 
 target_link_libraries(${TARGET_NAME}
 PRIVATE
+        ${OpenCV_LIBS}
         ${GSTREAMER_LIBRARIES}
+        ${GSTVIDEO_LIBRARIES}
 )

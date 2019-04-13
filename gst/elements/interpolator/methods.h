@@ -10,11 +10,12 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 
-#include "gstinterpolator.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+#include "gstinterpolator.h"
 
 GstFlowReturn opencv_resize(GstInterpolator *interpolator, GstBuffer *in_buffer, GstBuffer *out_buffer);
 

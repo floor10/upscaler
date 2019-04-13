@@ -41,7 +41,7 @@ struct _GstInterpolator
 
 struct _GstInterpolatorClass
 {
-  GstElementClass parent_class;
+  GstBaseTransformClass base_interpolator_class;
 };
 
 /* Standard function returning type information. */
