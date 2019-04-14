@@ -10,7 +10,6 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

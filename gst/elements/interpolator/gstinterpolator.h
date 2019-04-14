@@ -7,45 +7,38 @@
 #ifndef __GST_INTERPOLATOR_H__
 #define __GST_INTERPOLATOR_H__
 
+#include <gst/base/gstbasetransform.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
-#include <gst/base/gstbasetransform.h>
 
 G_BEGIN_DECLS
 
 /* #defines don't like whitespacey bits */
-#define GST_TYPE_INTERPOLATOR \
-  (gst_interpolator_get_type())
-#define GST_INTERPOLATOR(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_INTERPOLATOR,GstInterpolator))
-#define GST_INTERPOLATOR_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_INTERPOLATOR,GstInterpolatorClass))
-#define GST_IS_INTERPOLATOR(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_INTERPOLATOR))
-#define GST_IS_INTERPOLATOR_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_INTERPOLATOR))
+#define GST_TYPE_INTERPOLATOR (gst_interpolator_get_type())
+#define GST_INTERPOLATOR(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_INTERPOLATOR, GstInterpolator))
+#define GST_INTERPOLATOR_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), GST_TYPE_INTERPOLATOR, GstInterpolatorClass))
+#define GST_IS_INTERPOLATOR(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), GST_TYPE_INTERPOLATOR))
+#define GST_IS_INTERPOLATOR_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_INTERPOLATOR))
 
-typedef struct _GstInterpolator      GstInterpolator;
+typedef struct _GstInterpolator GstInterpolator;
 typedef struct _GstInterpolatorClass GstInterpolatorClass;
 
-struct _GstInterpolator
-{
-  GstBaseTransform base_interpolator;
+struct _GstInterpolator {
+    GstBaseTransform base_interpolator;
 
-  GstPad *sinkpad, *srcpad;
-  GstVideoInfo *input_video_info;
-  GstVideoInfo *output_video_info;
+    GstPad *sinkpad, *srcpad;
+    GstVideoInfo *input_video_info;
+    GstVideoInfo *output_video_info;
 
-  gboolean silent;
+    gboolean silent;
 };
 
-struct _GstInterpolatorClass
-{
-  GstBaseTransformClass base_interpolator_class;
+struct _GstInterpolatorClass {
+    GstBaseTransformClass base_interpolator_class;
 };
 
 /* Standard function returning type information. */
-GType gst_interpolator_get_type (void);
+GType gst_interpolator_get_type(void);
 
 G_END_DECLS
 
