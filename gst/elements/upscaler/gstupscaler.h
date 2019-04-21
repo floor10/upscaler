@@ -23,10 +23,15 @@ G_BEGIN_DECLS
 typedef struct _GstUpScaler GstUpScaler;
 typedef struct _GstUpScalerClass GstUpScalerClass;
 
+typedef enum { GST_UPSCALER_CPU, GST_UPSCALER_GPU } GstUpscalerDevice;
+
 struct _GstUpScaler {
     GstBaseTransform base_upscaler;
 
     GstPad *sinkpad, *srcpad;
+    gchar *model;
+    gchar *device;
+    GstUpscalerDevice device_type;
 
     gboolean silent;
 };

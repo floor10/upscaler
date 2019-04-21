@@ -17,6 +17,8 @@
 #define ELEMENT_BRIEF_DESCRIPTION                                                                                      \
     "The same is truth about its description... Who the hell thought that it is good idea?"
 
+#define DEFAULT_DEVICE GST_UPSCALER_CPU
+
 #define GST_VIDEO_SRC_CAPS GST_VIDEO_CAPS_MAKE("{ BGR, BGRx, BGRA }")
 #define GST_VIDEO_SINK_CAPS GST_VIDEO_CAPS_MAKE("{ BGR, BGRx, BGRA }")
 
@@ -29,7 +31,7 @@ enum {
     LAST_SIGNAL
 };
 
-enum { PROP_0, PROP_SILENT };
+enum { PROP_0, PROP_MODEL, PROP_DEVICE, PROP_SILENT };
 
 G_DEFINE_TYPE_WITH_CODE(GstUpScaler, gst_upscaler, GST_TYPE_BASE_TRANSFORM,
                         GST_DEBUG_CATEGORY_INIT(gst_upscaler_debug, "upscaler", 0,
@@ -37,6 +39,12 @@ G_DEFINE_TYPE_WITH_CODE(GstUpScaler, gst_upscaler, GST_TYPE_BASE_TRANSFORM,
 
 static void gst_upscaler_set_property(GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void gst_upscaler_get_property(GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
+
+#define GST_TYPE_UPSCALER_DEVICE (gst_upscaler_device_get_type())
+GType gst_upscaler_device_get_type(void);
+
+/* property initialization */
+static void gst_upscaler_set_device(GstUpScaler *upscaler, GstUpscalerDevice device_type);
 
 /* caps handling */
 static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps);
@@ -52,6 +60,15 @@ static void gst_upscaler_class_init(GstUpScalerClass *klass) {
 
     gobject_class->set_property = gst_upscaler_set_property;
     gobject_class->get_property = gst_upscaler_get_property;
+
+    g_object_class_install_property(gobject_class, PROP_MODEL,
+                                    g_param_spec_string("model", "Model", "Inference model file path", NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+    g_object_class_install_property(gobject_class, PROP_DEVICE,
+                                    g_param_spec_enum("device", "Device", "Device for inference",
+                                                      GST_TYPE_UPSCALER_DEVICE, DEFAULT_DEVICE,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
     g_object_class_install_property(
         gobject_class, PROP_SILENT,
@@ -74,14 +91,29 @@ static void gst_upscaler_class_init(GstUpScalerClass *klass) {
 /* initialize the new element
  * initialize instance structure
  */
-static void gst_upscaler_init(GstUpScaler *upscaler) { upscaler->silent = FALSE; }
+static void gst_upscaler_init(GstUpScaler *upscaler) {
+    GST_DEBUG_OBJECT(upscaler, "Upscaler element initialization");
+
+    upscaler->model = NULL;
+    gst_upscaler_set_device(upscaler, DEFAULT_DEVICE);
+    upscaler->silent = FALSE;
+}
 
 static void gst_upscaler_set_property(GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec) {
-    GstUpScaler *filter = GST_UPSCALER(object);
+    GstUpScaler *upscaler = GST_UPSCALER(object);
+
+    GST_DEBUG_OBJECT(upscaler, "Setting upscaler element properties");
 
     switch (prop_id) {
+    case PROP_MODEL:
+        // FIXME: add protection in case of dynamic model change
+        upscaler->model = g_value_dup_string(value);
+        break;
+    case PROP_DEVICE:
+        gst_upscaler_set_device(upscaler, g_value_get_enum(value));
+        break;
     case PROP_SILENT:
-        filter->silent = g_value_get_boolean(value);
+        upscaler->silent = g_value_get_boolean(value);
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
@@ -90,11 +122,17 @@ static void gst_upscaler_set_property(GObject *object, guint prop_id, const GVal
 }
 
 static void gst_upscaler_get_property(GObject *object, guint prop_id, GValue *value, GParamSpec *pspec) {
-    GstUpScaler *filter = GST_UPSCALER(object);
+    GstUpScaler *upscaler = GST_UPSCALER(object);
 
     switch (prop_id) {
+    case PROP_MODEL:
+        g_value_set_string(value, upscaler->model);
+        break;
+    case PROP_DEVICE:
+        g_value_set_enum(value, upscaler->device_type);
+        break;
     case PROP_SILENT:
-        g_value_set_boolean(value, filter->silent);
+        g_value_set_boolean(value, upscaler->silent);
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
@@ -120,4 +158,37 @@ static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuff
     // TODO: implement method
 
     return GST_FLOW_OK;
+}
+
+/* GstUpscaler method implementations */
+
+GType gst_upscaler_device_get_type(void) {
+    static GType upscaler_device_type = 0;
+    static const GEnumValue device_types[] = {{GST_UPSCALER_CPU, "Inference device is CPU", "CPU"},
+                                              {GST_UPSCALER_GPU, "Inference device is GPU", "GPU"},
+                                              {0, NULL, NULL}};
+
+    if (!upscaler_device_type) {
+        upscaler_device_type = g_enum_register_static("GstUpscalerDevice", device_types);
+    }
+    return upscaler_device_type;
+}
+
+static void gst_upscaler_set_device(GstUpScaler *upscaler, GstUpscalerDevice device_type) {
+    GST_DEBUG_OBJECT(upscaler, "Setting device to %d", device_type);
+
+    GEnumValue *enum_value;
+    GEnumClass *enum_class;
+
+    upscaler->device_type = device_type;
+
+    enum_class = g_type_class_ref(GST_TYPE_UPSCALER_DEVICE);
+    enum_value = g_enum_get_value(enum_class, device_type);
+    if (enum_value) {
+        g_free(upscaler->device);
+        upscaler->device = g_strdup(enum_value->value_nick);
+    } else
+        g_assert_not_reached();
+
+    g_type_class_unref(enum_class);
 }
