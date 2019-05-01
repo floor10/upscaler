@@ -1,35 +1,12 @@
-#include "upscaler.h"
-#include <gst/gst.h>
-#include <inference_engine.hpp>
+#include "openvino_inference.h"
 
 using namespace std;
 using namespace InferenceEngine;
 
-const std::string path_to_model_with_name = "";
-const int BATCH_SIZE = 1;
-
 using INPUT_PRECISION = Precision::U8;
 using OUTPUT_PRECISION = Precision::FP32;
 
-
-class OpenVinoInference
-{
-private:
-    InferRequest _infer_request;
-public:
-    OpenVinoInference(/* args */);
-    ~OpenVinoInference();
-};
-
-OpenVinoInference::OpenVinoInference(/* args */)
-{
-
-}
-
-OpenVinoInference::~OpenVinoInference()
-{
-}
-
+namespace {
 
 CNNNetwork create_network() {
     CNNNetReader network_reader;
@@ -39,7 +16,7 @@ CNNNetwork create_network() {
     return network_reader.getNetwork();
 }
 
-InputsDataMap get_configured_inputs(CNNNetwork& network) {
+InputsDataMap get_configured_inputs(CNNNetwork &network) {
     InputsDataMap inputs_info(network.getInputsInfo());
     for (auto &input_info : inputs_info) {
         input_info.second->setLayout(Layout::NCHW);
@@ -48,8 +25,7 @@ InputsDataMap get_configured_inputs(CNNNetwork& network) {
     return inputs_info;
 }
 
-OutputsDataMap get_configured_outputs(CNNNetwork& network)
-{
+OutputsDataMap get_configured_outputs(CNNNetwork &network) {
     OutputsDataMap outputs_info = network.getOutputsInfo();
     DataPtr output_info = outputs_info.begin()->second;
     string output_name = outputs_info.begin()->first;
@@ -80,8 +56,7 @@ size_t get_blob_size(const Blob::Ptr &blob) {
     return dims[1] * dims[2] * dims[3];
 }
 
-void copy_blob_into_image(const Blob::Ptr& blob, GstMemory *memory)
-{
+void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
     GstMapInfo info = {};
     gst_memory_map(memory, &info, GST_MAP_WRITE);
     auto blob_data = blob->buffer().as<PrecisionTrait<OUTPUT_PRECISION>::value_type *>();
@@ -98,19 +73,21 @@ void copy_blob_into_image(const Blob::Ptr& blob, GstMemory *memory)
     gst_memory_unmap(memory, &info);
 }
 
-void inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image) {
+} // namespace
+
+OpenVinoInference::OpenVinoInference(GstUpScaler *upscaler) : _upscaler(upscaler) {
     CNNNetwork network = create_network();
-
-    InputsDataMap inputs_info = get_configured_inputs(network);
-
-    OutputsDataMap outputs_info = get_configured_outputs(network);
-
     InferencePlugin plugin(PluginDispatcher({"CPU"}).getSuitablePlugin(TargetDevice::eCPU));
     ExecutableNetwork executable_network = plugin.LoadNetwork(network, {});
-    InferRequest infer_request = executable_network.CreateInferRequest();
 
+    this->_infer_request = executable_network.CreateInferRequest();
+    this->_inputs_info = get_configured_inputs(network);
+    this->_outputs_info = get_configured_outputs(network);
+}
+
+void OpenVinoInference::copy_images_into_blobs(GstMemory *resized_image, GstMemory *original_image) {
     map<int, GstMemory *> memories = {{original_image->size, original_image}, {resized_image->size, resized_image}};
-    for (auto &input_info : inputs_info) {
+    for (auto &input_info : this->_inputs_info) {
         string input_name = input_info->first;
 
         Blob::Ptr input_blob = infer_request.GetBlob(input_name);
@@ -118,9 +95,15 @@ void inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resi
         GstMemory memory = memories[get_blob_size(input_blob)];
         copy_image_into_blob(memory, input_blob);
     }
-    infer_request.Infer();
+}
 
-    string output_layer_name = outputs_info.begin()->first;
+void OpenVinoInference::inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resized_image,
+                                  GstMemory *result_image) {
+    copy_images_into_blobs(resized_image, original_image);
+
+    this->_infer_request.Infer();
+
+    string output_layer_name = this->_outputs_info.begin()->first;
     Blob::Ptr output_blob = infer_request.GetBlob(output_layer_name);
     copy_blob_into_image(output_blob, result_image);
 }

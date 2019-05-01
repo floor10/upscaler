@@ -97,6 +97,7 @@ static void gst_upscaler_init(GstUpScaler *upscaler) {
     upscaler->model = NULL;
     gst_upscaler_set_device(upscaler, DEFAULT_DEVICE);
     upscaler->silent = FALSE;
+    upscaler->inference = create_openvino_inference(upscaler);
 }
 
 static void gst_upscaler_set_property(GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec) {
@@ -164,7 +165,7 @@ static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuff
         // TODO:
     }
 
-
+    // TODO: call inference
 
     return GST_FLOW_OK;
 }

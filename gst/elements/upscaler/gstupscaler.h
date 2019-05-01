@@ -7,6 +7,8 @@
 #ifndef __GST_UPSCALER_H__
 #define __GST_UPSCALER_H__
 
+#include "openvino_inference_factory.h"
+
 #include <gst/base/gstbasetransform.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
@@ -34,6 +36,7 @@ struct _GstUpScaler {
     GstUpscalerDevice device_type;
 
     gboolean silent;
+    OpenVinoInference *inference;
 };
 
 struct _GstUpScalerClass {
