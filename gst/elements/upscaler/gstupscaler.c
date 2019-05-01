@@ -155,7 +155,16 @@ static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuff
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "Buffers transforming in the process");
 
-    // TODO: implement method
+    GstMemory *orignal_image = gst_buffer_peek_memory(input_buffer, 0);
+    if (original_image == NULL) {
+        // TODO:
+    }
+    GstMemory *resized_image = gst_buffer_peek_memory(input_buffer, 1);
+    if (resized_image == NULL) {
+        // TODO:
+    }
+
+
 
     return GST_FLOW_OK;
 }

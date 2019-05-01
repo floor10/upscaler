@@ -10,6 +10,8 @@ set(TARGET_NAME "gstsuperesolution")
 
 find_package(OpenCV REQUIRED core imgproc)
 find_package(PkgConfig REQUIRED)
+find_package(InferenceEngine 1.5 REQUIRED)
+
 pkg_check_modules(GSTREAMER gstreamer-1.0 REQUIRED)
 pkg_check_modules(GSTVIDEO gstreamer-video-1.0 REQUIRED)
 
@@ -42,4 +44,7 @@ PRIVATE
         ${OpenCV_LIBS}
         ${GSTREAMER_LIBRARIES}
         ${GSTVIDEO_LIBRARIES}
+        IE::ie_cpu_extension
+PUBLIC
+        IE::inference_engine
 )
