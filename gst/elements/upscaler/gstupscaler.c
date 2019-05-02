@@ -43,6 +43,9 @@ static void gst_upscaler_get_property(GObject *object, guint prop_id, GValue *va
 #define GST_TYPE_UPSCALER_DEVICE (gst_upscaler_device_get_type())
 GType gst_upscaler_device_get_type(void);
 
+/* states */
+static gboolean gst_upscaler_start(GstBaseTransform *transform);
+
 /* property initialization */
 static void gst_upscaler_set_device(GstUpScaler *upscaler, GstUpscalerDevice device_type);
 
@@ -50,7 +53,7 @@ static void gst_upscaler_set_device(GstUpScaler *upscaler, GstUpscalerDevice dev
 static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps);
 
 /* frame output */
-static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *in_buffer, GstBuffer *out_buffer);
+static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *input_buffer, GstBuffer *output_buffer);
 
 /* initialize the upscaler's class */
 static void gst_upscaler_class_init(GstUpScalerClass *klass) {
@@ -86,6 +89,7 @@ static void gst_upscaler_class_init(GstUpScalerClass *klass) {
 
     base_transform_class->set_caps = GST_DEBUG_FUNCPTR(gst_upscaler_set_caps);
     base_transform_class->transform = GST_DEBUG_FUNCPTR(gst_upscaler_transform);
+    base_transform_class->start = GST_DEBUG_FUNCPTR(gst_upscaler_start);
 }
 
 /* initialize the new element
@@ -97,7 +101,7 @@ static void gst_upscaler_init(GstUpScaler *upscaler) {
     upscaler->model = NULL;
     gst_upscaler_set_device(upscaler, DEFAULT_DEVICE);
     upscaler->silent = FALSE;
-    upscaler->inference = create_openvino_inference(upscaler);
+    upscaler->inference = NULL;
 }
 
 static void gst_upscaler_set_property(GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec) {
@@ -143,6 +147,15 @@ static void gst_upscaler_get_property(GObject *object, guint prop_id, GValue *va
 
 /* GstUpscaler vmethod implementations */
 
+static gboolean gst_upscaler_start(GstBaseTransform *transform) {
+    GstUpScaler *upscaler = GST_UPSCALER(transform);
+    GST_DEBUG_OBJECT(upscaler, "UpScaler start");
+
+    upscaler->inference = create_openvino_inference(upscaler);
+
+    return TRUE;
+}
+
 static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps) {
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "Caps setting in the process");
@@ -152,20 +165,22 @@ static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_c
     return TRUE;
 }
 
-static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *in_buffer, GstBuffer *out_buffer) {
+static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *input_buffer, GstBuffer *output_buffer) {
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "Buffers transforming in the process");
 
-    GstMemory *orignal_image = gst_buffer_peek_memory(input_buffer, 0);
+    GstMemory *original_image = gst_buffer_peek_memory(input_buffer, 0);
     if (original_image == NULL) {
-        // TODO:
+        g_printerr("ERROR I can not get the original image from the buffer");
     }
     GstMemory *resized_image = gst_buffer_peek_memory(input_buffer, 1);
     if (resized_image == NULL) {
-        // TODO:
+        g_printerr("ERROR I can not get the resized image from the buffer");
     }
-
-    // TODO: call inference
+    gsize resized_image_size = gst_memory_get_sizes(resized_image, NULL, NULL); 
+    GstMemory *result_image = gst_allocator_alloc(NULL, resized_image_size, NULL);
+    upscaler->inference->inference(original_image, resized_image, result_image);
+    gst_buffer_replace_memory(output_buffer, 0, result_image);
 
     return GST_FLOW_OK;
 }
