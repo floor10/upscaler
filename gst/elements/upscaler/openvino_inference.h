@@ -1,8 +1,22 @@
-#include "upscaler.h"
+/*******************************************************************************
+ * Copyright (C) 2019 floor10
+ *
+ * SPDX-License-Identifier: MIT
+ ******************************************************************************/
+
+#ifndef __OPENVINO_INFERENCE__
+#define __OPENVINO_INFERENCE__
+
 #include <gst/gst.h>
+
+typedef struct _GstUpScaler GstUpScaler;
+
+#ifdef __cplusplus
+
 #include <inference_engine.hpp>
 
-const std::string path_to_model_with_name = "";
+const std::string path_to_model_with_name =
+    "/root/intel_models/single-image-super-resolution-1032/FP32/single-image-super-resolution-1032";
 const int BATCH_SIZE = 1;
 
 class OpenVinoInference {
@@ -20,3 +34,21 @@ class OpenVinoInference {
 
     void inference(GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image);
 };
+
+#else /* __cplusplus */
+
+typedef struct OpenVinoInference OpenVinoInference;
+
+#endif /* __cplusplus */
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+OpenVinoInference *create_openvino_inference(GstUpScaler *upscaler);
+
+#ifdef __cplusplus
+} /* extern C */
+#endif /* __cplusplus */
+
+#endif /* __OPENVINO_INFERENCE__ */
