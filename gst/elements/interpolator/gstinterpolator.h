@@ -28,7 +28,8 @@ struct _GstInterpolator {
 
     GstPad *sinkpad, *srcpad;
     GstVideoInfo *input_video_info;
-    GstVideoInfo *output_video_info;
+    guint width;
+    guint height;
 
     gboolean silent;
 };

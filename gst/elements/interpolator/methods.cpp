@@ -24,8 +24,7 @@ GstFlowReturn opencv_resize(GstInterpolator *interpolator, GstBuffer *in_buffer,
 
     cv::Mat in_frame_mat(GST_VIDEO_INFO_HEIGHT(interpolator->input_video_info),
                          GST_VIDEO_INFO_WIDTH(interpolator->input_video_info), CV_8UC4, in_buffer_map_info.data);
-    cv::Size out_frame_size(GST_VIDEO_INFO_WIDTH(interpolator->output_video_info),
-                            GST_VIDEO_INFO_HEIGHT(interpolator->output_video_info));
+    cv::Size out_frame_size(interpolator->width, interpolator->height);
     cv::resize(in_frame_mat, out_frame_mat, out_frame_size, 0, 0, cv::INTER_CUBIC);
 
     gst_buffer_unmap(in_buffer, &in_buffer_map_info);
