@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  ******************************************************************************/
 
-#include "openvino_inference.h"
 #include "gstupscaler.h"
+#include "openvino_inference.h"
 
 using namespace std;
 using namespace InferenceEngine;
@@ -80,9 +80,9 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
 } // namespace
 
 OpenVinoInference::OpenVinoInference() {
-    CNNNetwork network = create_network();
-    InferencePlugin plugin(PluginDispatcher().getSuitablePlugin(TargetDevice::eCPU));
-    ExecutableNetwork executable_network = plugin.LoadNetwork(network, {});
+    this->network = create_network();
+    this->plugin = InferencePlugin(PluginDispatcher().getSuitablePlugin(TargetDevice::eCPU));
+    this->executable_network = plugin.LoadNetwork(network, {});
 
     this->_infer_request = executable_network.CreateInferRequest();
     this->_inputs_info = get_configured_inputs(network);
@@ -90,6 +90,7 @@ OpenVinoInference::OpenVinoInference() {
 }
 
 void OpenVinoInference::copy_images_into_blobs(GstMemory *resized_image, GstMemory *original_image) {
+    // TODO: rewrite with more optimal code
     map<int, GstMemory *> memories = {{original_image->size, original_image}, {resized_image->size, resized_image}};
     for (auto &input_info : this->_inputs_info) {
         string input_name = input_info.first;
