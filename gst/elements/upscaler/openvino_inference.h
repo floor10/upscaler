@@ -21,7 +21,6 @@ const int BATCH_SIZE = 1;
 
 class OpenVinoInference {
   private:
-    GstUpScaler *_upscaler;
     InferenceEngine::InferRequest _infer_request;
     InferenceEngine::InputsDataMap _inputs_info;
     InferenceEngine::OutputsDataMap _outputs_info;
@@ -29,10 +28,10 @@ class OpenVinoInference {
     void copy_images_into_blobs(GstMemory *resized_image, GstMemory *original_image);
 
   public:
-    OpenVinoInference(GstUpScaler *upscaler);
+    OpenVinoInference();
     ~OpenVinoInference() = default;
 
-    void inference(GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image);
+    void run(GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image);
 };
 
 #else /* __cplusplus */
@@ -45,7 +44,12 @@ typedef struct OpenVinoInference OpenVinoInference;
 extern "C" {
 #endif /* __cplusplus */
 
-OpenVinoInference *create_openvino_inference(GstUpScaler *upscaler);
+typedef struct _InferenceFactory {
+    OpenVinoInference *openvino_inference;
+} InferenceFactory;
+
+InferenceFactory *create_openvino_inference();
+void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image);
 
 #ifdef __cplusplus
 } /* extern C */

@@ -5,6 +5,7 @@
  ******************************************************************************/
 
 #include "openvino_inference.h"
+#include "gstupscaler.h"
 
 using namespace std;
 using namespace InferenceEngine;
@@ -78,9 +79,9 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
 
 } // namespace
 
-OpenVinoInference::OpenVinoInference(GstUpScaler *upscaler) : _upscaler(upscaler) {
+OpenVinoInference::OpenVinoInference() {
     CNNNetwork network = create_network();
-    InferencePlugin plugin(PluginDispatcher({"CPU"}).getSuitablePlugin(TargetDevice::eCPU));
+    InferencePlugin plugin(PluginDispatcher().getSuitablePlugin(TargetDevice::eCPU));
     ExecutableNetwork executable_network = plugin.LoadNetwork(network, {});
 
     this->_infer_request = executable_network.CreateInferRequest();
@@ -100,7 +101,7 @@ void OpenVinoInference::copy_images_into_blobs(GstMemory *resized_image, GstMemo
     }
 }
 
-void OpenVinoInference::inference(GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image) {
+void OpenVinoInference::run(GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image) {
     copy_images_into_blobs(resized_image, original_image);
 
     this->_infer_request.Infer();
@@ -110,4 +111,13 @@ void OpenVinoInference::inference(GstMemory *original_image, GstMemory *resized_
     copy_blob_into_image(output_blob, result_image);
 }
 
-OpenVinoInference *create_openvino_inference(GstUpScaler *upscaler) { return new OpenVinoInference(upscaler); }
+InferenceFactory *create_openvino_inference() { return new InferenceFactory{new OpenVinoInference()}; }
+
+void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resized_image,
+                   GstMemory *result_image) {
+    if (!upscaler || !upscaler->inference || !upscaler->inference->openvino_inference) {
+        // TODO:
+        return;
+    }
+    upscaler->inference->openvino_inference->run(original_image, resized_image, result_image);
+}

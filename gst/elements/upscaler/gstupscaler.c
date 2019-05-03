@@ -53,7 +53,8 @@ static void gst_upscaler_set_device(GstUpScaler *upscaler, GstUpscalerDevice dev
 static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps);
 
 /* frame output */
-static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *input_buffer, GstBuffer *output_buffer);
+static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *input_buffer,
+                                            GstBuffer *output_buffer);
 
 /* initialize the upscaler's class */
 static void gst_upscaler_class_init(GstUpScalerClass *klass) {
@@ -165,21 +166,24 @@ static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_c
     return TRUE;
 }
 
-static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *input_buffer, GstBuffer *output_buffer) {
+static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *input_buffer,
+                                            GstBuffer *output_buffer) {
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "Buffers transforming in the process");
 
     GstMemory *original_image = gst_buffer_peek_memory(input_buffer, 0);
     if (original_image == NULL) {
-        g_printerr("ERROR I can not get the original image from the buffer");
+        GST_ERROR_OBJECT(upscaler, "Can not get the original image from the buffer");
+        return GST_BASE_TRANSFORM_FLOW_DROPPED;
     }
     GstMemory *resized_image = gst_buffer_peek_memory(input_buffer, 1);
     if (resized_image == NULL) {
-        g_printerr("ERROR I can not get the resized image from the buffer");
+        GST_ERROR_OBJECT(upscaler, "Can not get the resized image from the buffer");
+        return GST_BASE_TRANSFORM_FLOW_DROPPED;
     }
-    gsize resized_image_size = gst_memory_get_sizes(resized_image, NULL, NULL); 
+    gsize resized_image_size = gst_memory_get_sizes(resized_image, NULL, NULL);
     GstMemory *result_image = gst_allocator_alloc(NULL, resized_image_size, NULL);
-    upscaler->inference->inference(original_image, resized_image, result_image);
+    run_inference(upscaler, original_image, resized_image, result_image);
     gst_buffer_replace_memory(output_buffer, 0, result_image);
 
     return GST_FLOW_OK;

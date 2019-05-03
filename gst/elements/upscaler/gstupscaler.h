@@ -36,7 +36,7 @@ struct _GstUpScaler {
     GstUpscalerDevice device_type;
 
     gboolean silent;
-    OpenVinoInference *inference;
+    InferenceFactory *inference;
 };
 
 struct _GstUpScalerClass {
