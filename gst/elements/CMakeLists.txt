@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MIT
 # ==============================================================================
 
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.5)
 
 set(TARGET_NAME "gstsuperesolution")
 
@@ -19,6 +19,7 @@ file(GLOB PROJECT_SOURCES
     interpolator/*.c
     interpolator/*.cpp
     upscaler/*.c
+    upscaler/*.cpp
     gstelements.c
 )
 
