@@ -66,7 +66,7 @@ static void gst_upscaler_class_init(GstUpScalerClass *klass) {
     gobject_class->get_property = gst_upscaler_get_property;
 
     g_object_class_install_property(gobject_class, PROP_MODEL,
-                                    g_param_spec_string("model", "Model", "Inference model file path", NULL,
+                                    g_param_spec_string("model", "Model", "Required. Inference model file path", NULL,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
     g_object_class_install_property(gobject_class, PROP_DEVICE,
@@ -151,8 +151,15 @@ static void gst_upscaler_get_property(GObject *object, guint prop_id, GValue *va
 static gboolean gst_upscaler_start(GstBaseTransform *transform) {
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "UpScaler start");
+    GError *error = NULL;
+    upscaler->inference = create_openvino_inference(upscaler->model, &error);
 
-    upscaler->inference = create_openvino_inference(upscaler);
+    if (error)
+    {
+        GST_ELEMENT_ERROR(upscaler, RESOURCE, TOO_LAZY, ("Upscaler plugin intitialization failed"),
+                          ("%s", error->message));
+        return FALSE;
+    }
 
     return TRUE;
 }

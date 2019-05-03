@@ -15,8 +15,6 @@ typedef struct _GstUpScaler GstUpScaler;
 
 #include <inference_engine.hpp>
 
-const std::string path_to_model_with_name =
-    "/home/uabdumum/umed/single-image-super-resolution-1032/FP32/single-image-super-resolution-1032";
 const int BATCH_SIZE = 1;
 
 class OpenVinoInference {
@@ -32,7 +30,7 @@ class OpenVinoInference {
     void copy_images_into_blobs(GstMemory *resized_image, GstMemory *original_image);
 
   public:
-    OpenVinoInference();
+    OpenVinoInference(std::string path_to_model_xml);
     ~OpenVinoInference() = default;
 
     void run(GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image);
@@ -52,7 +50,7 @@ typedef struct _InferenceFactory {
     OpenVinoInference *openvino_inference;
 } InferenceFactory;
 
-InferenceFactory *create_openvino_inference();
+InferenceFactory *create_openvino_inference(gchar *path_to_model_xml, GError **error);
 void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image);
 
 #ifdef __cplusplus

@@ -4,18 +4,18 @@
  * SPDX-License-Identifier: MIT
  ******************************************************************************/
 
-#include "gstupscaler.h"
 #include "openvino_inference.h"
+#include "gstupscaler.h"
 
 using namespace std;
 using namespace InferenceEngine;
 
 namespace {
 
-CNNNetwork create_network() {
+CNNNetwork create_network(std::string path_to_model_xml) {
     CNNNetReader network_reader;
-    network_reader.ReadNetwork(path_to_model_with_name + ".xml");
-    network_reader.ReadWeights(path_to_model_with_name + ".bin");
+    network_reader.ReadNetwork(path_to_model_xml);
+    network_reader.ReadWeights(path_to_model_xml.substr(0, path_to_model_xml.rfind('.')) + ".bin");
     network_reader.getNetwork().setBatchSize(BATCH_SIZE);
     return network_reader.getNetwork();
 }
@@ -79,8 +79,8 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
 
 } // namespace
 
-OpenVinoInference::OpenVinoInference() {
-    this->network = create_network();
+OpenVinoInference::OpenVinoInference(std::string path_to_model_xml) {
+    this->network = create_network(path_to_model_xml);
     this->plugin = InferencePlugin(PluginDispatcher().getSuitablePlugin(TargetDevice::eCPU));
     this->executable_network = plugin.LoadNetwork(network, {});
 
@@ -112,7 +112,16 @@ void OpenVinoInference::run(GstMemory *original_image, GstMemory *resized_image,
     copy_blob_into_image(output_blob, result_image);
 }
 
-InferenceFactory *create_openvino_inference() { return new InferenceFactory{new OpenVinoInference()}; }
+InferenceFactory *create_openvino_inference(gchar *path_to_model_xml, GError **error) {
+    InferenceFactory *inference_factory = nullptr;
+    try {
+        // FIXME: invalid error message in case of empty path_to_model_xml
+        inference_factory = new InferenceFactory{new OpenVinoInference(path_to_model_xml)};
+    } catch (const std::exception &exc) {
+        g_set_error(error, 1, 1, "%s", exc.what());
+    }
+    return inference_factory;
+}
 
 void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resized_image,
                    GstMemory *result_image) {
