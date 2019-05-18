@@ -9,8 +9,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
-const int ORIGINAL_IMAGE_MODEL_INPUT_WIDTH = 480;
-const int ORIGINAL_IMAGE_MODEL_INPUT_HEIGHT = 270;
+const int ORIGINAL_IMAGE_MODEL_INPUT_WIDTH = 640;
+const int ORIGINAL_IMAGE_MODEL_INPUT_HEIGHT = 360;
 
 GstMemory *resize(const GstMapInfo &map_info, GstVideoInfo *video_info, int width, int height) {
     cv::Mat in_frame_mat(GST_VIDEO_INFO_HEIGHT(video_info), GST_VIDEO_INFO_WIDTH(video_info), CV_8UC3, map_info.data);
