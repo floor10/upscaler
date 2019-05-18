@@ -13,7 +13,7 @@ const int ORIGINAL_IMAGE_MODEL_INPUT_WIDTH = 480;
 const int ORIGINAL_IMAGE_MODEL_INPUT_HEIGHT = 270;
 
 GstMemory *resize(const GstMapInfo &map_info, GstVideoInfo *video_info, int width, int height) {
-    cv::Mat in_frame_mat(GST_VIDEO_INFO_HEIGHT(video_info), GST_VIDEO_INFO_WIDTH(video_info), CV_8UC4, map_info.data);
+    cv::Mat in_frame_mat(GST_VIDEO_INFO_HEIGHT(video_info), GST_VIDEO_INFO_WIDTH(video_info), CV_8UC3, map_info.data);
 
     cv::Mat resized;
     cv::resize(in_frame_mat, resized, cv::Size(width, height), 0, 0, cv::INTER_CUBIC);
