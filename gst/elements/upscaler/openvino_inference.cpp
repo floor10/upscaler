@@ -4,10 +4,12 @@
  * SPDX-License-Identifier: MIT
  ******************************************************************************/
 
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <fstream>
+
 #include "gstupscaler.h"
 #include "openvino_inference.h"
-#include <opencv2/opencv.hpp>
-#include <fstream>
 
 using namespace std;
 using namespace InferenceEngine;
@@ -15,7 +17,7 @@ using namespace InferenceEngine;
 namespace {
 
 
-CNNNetwork create_network(std::string path_to_model_xml) {
+CNNNetwork create_network(string path_to_model_xml) {
     CNNNetReader network_reader;
     network_reader.ReadNetwork(path_to_model_xml);
     network_reader.ReadWeights(path_to_model_xml.substr(0, path_to_model_xml.rfind('.')) + ".bin");
@@ -37,31 +39,27 @@ OutputsDataMap get_configured_outputs(CNNNetwork &network) {
     for (auto &item : outputs_info) {
         item.second->setPrecision(Precision::FP32);
     }
-    
+
     return outputs_info;
 }
 
-void copy_image_into_blob(GstMemory *memory, Blob::Ptr &blob) {
-    GstMapInfo info = {};
-    gst_memory_map(memory, &info, GST_MAP_READ);
-
-    auto blob_data = blob->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
+template <typename T>
+void copy_image_into_blob(cv::Mat image, Blob::Ptr &blob) {
+    T* blob_data = blob->buffer().as<T*>();
 
     const auto &dims = blob->getTensorDesc().getDims();
     size_t channels_number = dims[1];
-    size_t image_size = dims[3] * dims[2];
     size_t height = dims[2];
     size_t width = dims[3];
+    size_t image_size = width * height;
 
-    cv::Mat in_frame_mat(height, width, CV_8UC3, info.data);
     for (size_t c = 0; c < channels_number; c++) {
         for (size_t  h = 0; h < height; h++) {
             for (size_t w = 0; w < width; w++) {
-                blob_data[c * width * height + h * width + w] = in_frame_mat.at<cv::Vec3b>(h, w)[c];
+                blob_data[c * width * height + h * width + w] = image.at<cv::Vec3b>(h, w)[c];
             }
         }
     }
-    gst_memory_unmap(memory, &info);
 }
 
 size_t get_blob_size(const Blob::Ptr &blob) {
@@ -76,18 +74,22 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
 
     const auto &dims = blob->getTensorDesc().getDims();
     size_t channels_number = dims[1];
-    size_t image_size = dims[3] * dims[2];
     size_t height = dims[2];
     size_t width = dims[3];
+    size_t image_size = width * height;
+
     std::vector<cv::Mat> imgPlanes = {
         cv::Mat(height, width, CV_32FC1, blob_data),
         cv::Mat(height, width, CV_32FC1, &(blob_data[image_size])),
         cv::Mat(height, width, CV_32FC1, &(blob_data[image_size * 2]))
     };
+
     for (auto & img : imgPlanes)
         img.convertTo(img, CV_8UC1, 255);
+
     cv::Mat resultImg;
     cv::merge(imgPlanes, resultImg);
+
     size_t buffer_size = resultImg.total() * resultImg.elemSize();
     memcpy(static_cast<void*>(info.data), static_cast<void*>(resultImg.data), buffer_size);
     gst_memory_unmap(memory, &info);
@@ -95,7 +97,7 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
 
 } // namespace
 
-OpenVinoInference::OpenVinoInference(std::string path_to_model_xml) {
+OpenVinoInference::OpenVinoInference(string path_to_model_xml) {
     this->plugin = InferencePlugin(PluginDispatcher().getSuitablePlugin(TargetDevice::eCPU));
 
     this->network = create_network(path_to_model_xml);
@@ -106,28 +108,37 @@ OpenVinoInference::OpenVinoInference(std::string path_to_model_xml) {
     this->_infer_request = this->executable_network.CreateInferRequest();
 }
 
-void OpenVinoInference::copy_images_into_blobs(GstMemory *resized_image, GstMemory *original_image) {
-    // TODO: rewrite with more optimal code
-    map<int, GstMemory *> memories = {{original_image->size, original_image}, {resized_image->size, resized_image}};
+cv::Mat OpenVinoInference::resize_by_opencv(const GstMapInfo &image, size_t width, size_t height) {
+    cv::Mat in_frame_mat_rgb;
+    cv::Mat resized_image;
+
+    //FIXME: remove hardcode
+    cv::Mat in_frame_mat(540, 960, CV_8UC3, image.data);
+    cv::cvtColor(in_frame_mat, in_frame_mat_rgb, cv::ColorConversionCodes::COLOR_BGR2RGB);
+    cv::resize(in_frame_mat_rgb, resized_image, cv::Size(width, height), 0, 0, cv::INTER_CUBIC);
+
+    return resized_image;
+}
+
+void OpenVinoInference::run(GstMemory *original_image, GstMemory *result_image) {
+    GstMapInfo image_map_info;
+    cv::Mat input_image_mat;
+
+    if (!gst_memory_map(original_image, &image_map_info, GST_MAP_READ))
+        GST_ERROR("Memory map failed");
 
     for (auto &input_info : this->_inputs_info) {
         string input_name = input_info.first;
-
         Blob::Ptr input_blob = this->_infer_request.GetBlob(input_name);
-
-        auto it = memories.find(get_blob_size(input_blob));
-        if (it != memories.end()) {
-            GstMemory *memory = it->second;
-            copy_image_into_blob(memory, input_blob);
-        } else {
-            throw logic_error("network input and input image sizes are different");
-        }
+        SizeVector blob_size = input_blob->getTensorDesc().getDims();
+        size_t height = blob_size[2];
+        size_t width = blob_size[3]; 
+        input_image_mat = resize_by_opencv(image_map_info, width, height);
+        copy_image_into_blob<float_t>(input_image_mat, input_blob);
     }
-}
 
-void OpenVinoInference::run(GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image) {
-    copy_images_into_blobs(resized_image, original_image);
-
+    gst_memory_unmap(original_image, &image_map_info);
+    
     this->_infer_request.Infer();
 
     string output_layer_name = this->_outputs_info.begin()->first;
@@ -146,11 +157,10 @@ InferenceFactory *create_openvino_inference(gchar *path_to_model_xml, GError **e
     return inference_factory;
 }
 
-void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resized_image,
-                   GstMemory *result_image) {
+void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *result_image) {
     if (!upscaler || !upscaler->inference || !upscaler->inference->openvino_inference) {
         // TODO:
         return;
     }
-    upscaler->inference->openvino_inference->run(original_image, resized_image, result_image);
+    upscaler->inference->openvino_inference->run(original_image, result_image);
 }

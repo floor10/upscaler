@@ -178,20 +178,18 @@ static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuff
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "Buffers transforming in the process");
 
-    GstMemory *original_image = gst_buffer_peek_memory(input_buffer, 0);
+    GstMemory *original_image = gst_buffer_get_memory(input_buffer, 0);
     if (original_image == NULL) {
         GST_ERROR_OBJECT(upscaler, "Can not get the original image from the buffer");
         return GST_BASE_TRANSFORM_FLOW_DROPPED;
     }
-    GstMemory *resized_image = gst_buffer_peek_memory(input_buffer, 1);
-    if (resized_image == NULL) {
-        GST_ERROR_OBJECT(upscaler, "Can not get the resized image from the buffer");
-        return GST_BASE_TRANSFORM_FLOW_DROPPED;
-    }
-    gsize resized_image_size = gst_memory_get_sizes(resized_image, NULL, NULL);
-    GstMemory *result_image = gst_allocator_alloc(NULL, resized_image_size, NULL);
-    run_inference(upscaler, original_image, resized_image, result_image);
+
+    guint super_resolution_size = 1920 * 1080 *3;
+    GstMemory *result_image = gst_allocator_alloc(NULL, super_resolution_size, NULL);
+    run_inference(upscaler, original_image, result_image);
     gst_buffer_replace_memory(output_buffer, 0, result_image);
+
+    gst_memory_unref(original_image);
 
     return GST_FLOW_OK;
 }
