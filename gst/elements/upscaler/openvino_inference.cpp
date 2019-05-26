@@ -8,23 +8,6 @@
 #include "openvino_inference.h"
 #include <opencv2/opencv.hpp>
 #include <fstream>
-#include <Magick++.h>
-
-void write_buffer_to_file(unsigned char* blob, size_t h, size_t w, std::string filename)
-{
-   // Initialise ImageMagick library
-   Magick::InitializeMagick("oo");
-
-   // Create Image object and read in from pixel data above
-   Magick::Image image;
-   image.read(w, h,"RGB", Magick::StorageType::CharPixel, blob);
-
-   // Write the image to a file - change extension if you want a GIF or JPEG
-   image.write(filename);
-    // fstream ostr(filename, ios_base::out |  ios_base::binary);
-    // ostr.write(reinterpret_cast<char*>(buffer), size);
-    // ostr.close();
-}
 
 using namespace std;
 using namespace InferenceEngine;
@@ -51,9 +34,10 @@ InputsDataMap get_configured_inputs(CNNNetwork &network) {
 
 OutputsDataMap get_configured_outputs(CNNNetwork &network) {
     OutputsDataMap outputs_info = network.getOutputsInfo();
-    DataPtr output_info = outputs_info.begin()->second;
-    string output_name = outputs_info.begin()->first;
-    output_info->setPrecision(Precision::FP32);
+    for (auto &item : outputs_info) {
+        item.second->setPrecision(Precision::FP32);
+    }
+    
     return outputs_info;
 }
 
@@ -70,22 +54,13 @@ void copy_image_into_blob(GstMemory *memory, Blob::Ptr &blob) {
     size_t width = dims[3];
 
     cv::Mat in_frame_mat(height, width, CV_8UC3, info.data);
-    // write_buffer_to_file(info.data, dims[2], dims[3], "image.png");
     for (size_t c = 0; c < channels_number; c++) {
         for (size_t  h = 0; h < height; h++) {
             for (size_t w = 0; w < width; w++) {
-                size_t index = c * width * height + h * width + w;
-                // blob_data[index] = info.data[index];
-                blob_data[index] = in_frame_mat.at<cv::Vec3b>(h, w)[c];
+                blob_data[c * width * height + h * width + w] = in_frame_mat.at<cv::Vec3b>(h, w)[c];
             }
         }
     }
-    // for (size_t pid = 0; pid < image_size; pid++) {
-    //     for (size_t ch = 0; ch < channels_number; ch++) {
-    //         size_t index = ch * image_size + pid;
-    //         blob_data[index] = info.data[index];
-    //     }
-    // }
     gst_memory_unmap(memory, &info);
 }
 
@@ -104,7 +79,6 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
     size_t image_size = dims[3] * dims[2];
     size_t height = dims[2];
     size_t width = dims[3];
-    // write_buffer_to_file(info.data, dims[2], dims[3], "image.png");
     std::vector<cv::Mat> imgPlanes = {
         cv::Mat(height, width, CV_32FC1, blob_data),
         cv::Mat(height, width, CV_32FC1, &(blob_data[image_size])),
@@ -116,36 +90,20 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
     cv::merge(imgPlanes, resultImg);
     size_t buffer_size = resultImg.total() * resultImg.elemSize();
     memcpy(static_cast<void*>(info.data), static_cast<void*>(resultImg.data), buffer_size);
-
-    // for (size_t c = 0; c < channels_number; c++) {
-    //     for (size_t  h = 0; h < height; h++) {
-    //         for (size_t w = 0; w < width; w++) {
-    //             size_t index = c * width * height + h * width + w;
-    //             info.data[index] = resultImg.data[index];
-    //         }
-    //     }
-    // }
-    // for (size_t pid = 0; pid < image_size; pid++) {
-    //     for (size_t ch = 0; ch < channels_number; ch++) {
-    //         size_t index = ch * image_size + pid;
-    //         info.data[index] = blob_data[index];
-    //     }
-    // }
-    // write_buffer_to_file(resultImg.data, dims[2], dims[3], "opencv-output.png");
-    // write_buffer_to_file(info.data, dims[2], dims[3], "output.png");
     gst_memory_unmap(memory, &info);
 }
 
 } // namespace
 
 OpenVinoInference::OpenVinoInference(std::string path_to_model_xml) {
-    this->network = create_network(path_to_model_xml);
     this->plugin = InferencePlugin(PluginDispatcher().getSuitablePlugin(TargetDevice::eCPU));
-    this->executable_network = plugin.LoadNetwork(network, {});
 
-    this->_infer_request = executable_network.CreateInferRequest();
+    this->network = create_network(path_to_model_xml);
     this->_inputs_info = get_configured_inputs(network);
     this->_outputs_info = get_configured_outputs(network);
+
+    this->executable_network = this->plugin.LoadNetwork(network, {});
+    this->_infer_request = this->executable_network.CreateInferRequest();
 }
 
 void OpenVinoInference::copy_images_into_blobs(GstMemory *resized_image, GstMemory *original_image) {
