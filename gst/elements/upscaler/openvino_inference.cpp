@@ -109,14 +109,9 @@ OpenVinoInference::OpenVinoInference(string path_to_model_xml) {
 }
 
 cv::Mat OpenVinoInference::resize_by_opencv(const GstMapInfo &image, size_t width, size_t height) {
-    cv::Mat in_frame_mat_rgb;
     cv::Mat resized_image;
-
-    //FIXME: remove hardcode
-    cv::Mat in_frame_mat(540, 960, CV_8UC3, image.data);
-    cv::cvtColor(in_frame_mat, in_frame_mat_rgb, cv::ColorConversionCodes::COLOR_BGR2RGB);
+    cv::Mat in_frame_mat_rgb(540, 960, CV_8UC3, image.data);
     cv::resize(in_frame_mat_rgb, resized_image, cv::Size(width, height), 0, 0, cv::INTER_CUBIC);
-
     return resized_image;
 }
 
@@ -132,13 +127,13 @@ void OpenVinoInference::run(GstMemory *original_image, GstMemory *result_image) 
         Blob::Ptr input_blob = this->_infer_request.GetBlob(input_name);
         SizeVector blob_size = input_blob->getTensorDesc().getDims();
         size_t height = blob_size[2];
-        size_t width = blob_size[3]; 
+        size_t width = blob_size[3];
         input_image_mat = resize_by_opencv(image_map_info, width, height);
         copy_image_into_blob<float_t>(input_image_mat, input_blob);
     }
 
     gst_memory_unmap(original_image, &image_map_info);
-    
+
     this->_infer_request.Infer();
 
     string output_layer_name = this->_outputs_info.begin()->first;
