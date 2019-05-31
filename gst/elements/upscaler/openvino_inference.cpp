@@ -6,7 +6,6 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-#include <fstream>
 
 #include "gstupscaler.h"
 #include "openvino_inference.h"
@@ -84,11 +83,9 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
         cv::Mat(height, width, CV_32FC1, &(blob_data[image_size * 2]))
     };
 
-    for (auto & img : imgPlanes)
-        img.convertTo(img, CV_8UC1, 255);
-
     cv::Mat resultImg;
     cv::merge(imgPlanes, resultImg);
+    resultImg.convertTo(resultImg, CV_8UC3, 255);
 
     size_t buffer_size = resultImg.total() * resultImg.elemSize();
     memcpy(static_cast<void*>(info.data), static_cast<void*>(resultImg.data), buffer_size);
@@ -98,14 +95,14 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
 } // namespace
 
 OpenVinoInference::OpenVinoInference(string path_to_model_xml) {
-    this->plugin = InferencePlugin(PluginDispatcher().getSuitablePlugin(TargetDevice::eCPU));
+    this->_plugin = InferencePlugin(PluginDispatcher().getSuitablePlugin(TargetDevice::eCPU));
 
-    this->network = create_network(path_to_model_xml);
-    this->_inputs_info = get_configured_inputs(network);
-    this->_outputs_info = get_configured_outputs(network);
+    this->_network = create_network(path_to_model_xml);
+    this->_inputs_info = get_configured_inputs(_network);
+    this->_outputs_info = get_configured_outputs(_network);
 
-    this->executable_network = this->plugin.LoadNetwork(network, {});
-    this->_infer_request = this->executable_network.CreateInferRequest();
+    this->_executable_network = this->_plugin.LoadNetwork(_network, {});
+    this->_infer_request = this->_executable_network.CreateInferRequest();
 }
 
 cv::Mat OpenVinoInference::resize_by_opencv(const GstMapInfo &image, size_t width, size_t height) {

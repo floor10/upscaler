@@ -24,9 +24,9 @@ class OpenVinoInference {
     InferenceEngine::InputsDataMap _inputs_info;
     InferenceEngine::OutputsDataMap _outputs_info;
 
-    InferenceEngine::CNNNetwork network;
-    InferenceEngine::InferencePlugin plugin;
-    InferenceEngine::ExecutableNetwork executable_network;
+    InferenceEngine::CNNNetwork _network;
+    InferenceEngine::InferencePlugin _plugin;
+    InferenceEngine::ExecutableNetwork _executable_network;
 
     cv::Mat resize_by_opencv(const GstMapInfo &image, size_t width, size_t height);
 
