@@ -51,6 +51,7 @@ static void gst_upscaler_set_device(GstUpScaler *upscaler, GstUpscalerDevice dev
 
 /* caps handling */
 static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps);
+static GstCaps *gst_upscaler_transform_caps(GstBaseTransform * base_transform, GstPadDirection direction, GstCaps * caps, GstCaps * filter);
 
 /* frame output */
 static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *input_buffer,
@@ -88,9 +89,10 @@ static void gst_upscaler_class_init(GstUpScalerClass *klass) {
         gstelement_class,
         gst_pad_template_new("sink", GST_PAD_SINK, GST_PAD_ALWAYS, gst_caps_from_string(GST_VIDEO_SINK_CAPS)));
 
+    base_transform_class->transform_caps = GST_DEBUG_FUNCPTR(gst_upscaler_transform_caps);
     base_transform_class->set_caps = GST_DEBUG_FUNCPTR(gst_upscaler_set_caps);
-    base_transform_class->transform = GST_DEBUG_FUNCPTR(gst_upscaler_transform);
     base_transform_class->start = GST_DEBUG_FUNCPTR(gst_upscaler_start);
+    base_transform_class->transform = GST_DEBUG_FUNCPTR(gst_upscaler_transform);
 }
 
 /* initialize the new element
@@ -148,6 +150,38 @@ static void gst_upscaler_get_property(GObject *object, guint prop_id, GValue *va
 
 /* GstUpscaler vmethod implementations */
 
+static GstCaps *gst_upscaler_transform_caps(GstBaseTransform * base_transform, GstPadDirection direction, GstCaps * caps, GstCaps * filter){
+    GstCaps *result_caps;
+    GstStructure *structure;
+    GstCapsFeatures *features;
+    gint caps_size;
+
+    GST_DEBUG_OBJECT(base_transform, "Transforming caps %" GST_PTR_FORMAT " in direction %s", caps, (direction == GST_PAD_SINK) ? "sink" : "src");
+
+    result_caps = gst_caps_new_empty();
+    caps_size = gst_caps_get_size(caps);
+    for (guint i=0; i < caps_size; i++)
+    {
+        structure = gst_structure_copy(gst_caps_get_structure(caps, i));
+        features = gst_caps_get_features(caps, i);
+        gst_structure_set(structure, "width", GST_TYPE_INT_RANGE, 1, G_MAXINT, "height", GST_TYPE_INT_RANGE, 1, G_MAXINT, NULL);
+
+        gst_caps_append_structure_full(result_caps, structure, gst_caps_features_copy(features));
+    }
+
+    GST_DEBUG_OBJECT(base_transform, "returning caps: %" GST_PTR_FORMAT, result_caps);
+    return result_caps;
+}
+
+static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps) {
+    GstUpScaler *upscaler = GST_UPSCALER(transform);
+    GST_DEBUG_OBJECT(upscaler, "Caps setting in the process");
+
+    // TODO: implement method
+
+    return TRUE;
+}
+
 static gboolean gst_upscaler_start(GstBaseTransform *transform) {
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "UpScaler start");
@@ -164,34 +198,23 @@ static gboolean gst_upscaler_start(GstBaseTransform *transform) {
     return TRUE;
 }
 
-static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_caps, GstCaps *out_caps) {
-    GstUpScaler *upscaler = GST_UPSCALER(transform);
-    GST_DEBUG_OBJECT(upscaler, "Caps setting in the process");
-
-    // TODO: implement method
-
-    return TRUE;
-}
-
 static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuffer *input_buffer,
                                             GstBuffer *output_buffer) {
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "Buffers transforming in the process");
 
-    GstMemory *original_image = gst_buffer_peek_memory(input_buffer, 0);
+    GstMemory *original_image = gst_buffer_get_memory(input_buffer, 0);
     if (original_image == NULL) {
         GST_ERROR_OBJECT(upscaler, "Can not get the original image from the buffer");
         return GST_BASE_TRANSFORM_FLOW_DROPPED;
     }
-    GstMemory *resized_image = gst_buffer_peek_memory(input_buffer, 1);
-    if (resized_image == NULL) {
-        GST_ERROR_OBJECT(upscaler, "Can not get the resized image from the buffer");
-        return GST_BASE_TRANSFORM_FLOW_DROPPED;
-    }
-    gsize resized_image_size = gst_memory_get_sizes(resized_image, NULL, NULL);
-    GstMemory *result_image = gst_allocator_alloc(NULL, resized_image_size, NULL);
-    run_inference(upscaler, original_image, resized_image, result_image);
+
+    guint super_resolution_size = 1920 * 1080 *3;
+    GstMemory *result_image = gst_allocator_alloc(NULL, super_resolution_size, NULL);
+    run_inference(upscaler, original_image, result_image);
     gst_buffer_replace_memory(output_buffer, 0, result_image);
+
+    gst_memory_unref(original_image);
 
     return GST_FLOW_OK;
 }

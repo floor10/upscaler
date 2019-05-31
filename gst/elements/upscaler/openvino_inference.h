@@ -14,6 +14,7 @@ typedef struct _GstUpScaler GstUpScaler;
 #ifdef __cplusplus
 
 #include <inference_engine.hpp>
+#include <opencv2/opencv.hpp>
 
 const int BATCH_SIZE = 1;
 
@@ -23,17 +24,17 @@ class OpenVinoInference {
     InferenceEngine::InputsDataMap _inputs_info;
     InferenceEngine::OutputsDataMap _outputs_info;
 
-    InferenceEngine::CNNNetwork network;
-    InferenceEngine::InferencePlugin plugin;
-    InferenceEngine::ExecutableNetwork executable_network;
+    InferenceEngine::CNNNetwork _network;
+    InferenceEngine::InferencePlugin _plugin;
+    InferenceEngine::ExecutableNetwork _executable_network;
 
-    void copy_images_into_blobs(GstMemory *resized_image, GstMemory *original_image);
+    cv::Mat resize_by_opencv(const GstMapInfo &image, size_t width, size_t height);
 
   public:
     OpenVinoInference(std::string path_to_model_xml);
     ~OpenVinoInference() = default;
 
-    void run(GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image);
+    void run(GstMemory *original_image, GstMemory *result_image);
 };
 
 #else /* __cplusplus */
@@ -51,7 +52,7 @@ typedef struct _InferenceFactory {
 } InferenceFactory;
 
 InferenceFactory *create_openvino_inference(gchar *path_to_model_xml, GError **error);
-void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *resized_image, GstMemory *result_image);
+void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *result_image);
 
 #ifdef __cplusplus
 } /* extern C */
