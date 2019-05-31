@@ -105,9 +105,15 @@ OpenVinoInference::OpenVinoInference(string path_to_model_xml) {
     this->_infer_request = this->_executable_network.CreateInferRequest();
 }
 
+void OpenVinoInference::set_input_frame_size(size_t width, size_t height)
+{
+    this->_input_frame_width = width;
+    this->_input_frame_height = height;
+}
+
 cv::Mat OpenVinoInference::resize_by_opencv(const GstMapInfo &image, size_t width, size_t height) {
     cv::Mat resized_image;
-    cv::Mat in_frame_mat_rgb(540, 960, CV_8UC3, image.data);
+    cv::Mat in_frame_mat_rgb(this->_input_frame_height, this->_input_frame_width, CV_8UC3, image.data);
     cv::resize(in_frame_mat_rgb, resized_image, cv::Size(width, height), 0, 0, cv::INTER_CUBIC);
     return resized_image;
 }
@@ -149,9 +155,18 @@ InferenceFactory *create_openvino_inference(gchar *path_to_model_xml, GError **e
     return inference_factory;
 }
 
+void set_input_video_size(GstUpScaler *upscaler, GstVideoInfo *video_info)
+{
+    if (!upscaler || !upscaler->inference || !upscaler->inference->openvino_inference) {
+        // TODO: implement
+        return;
+    }
+    upscaler->inference->openvino_inference->set_input_frame_size(GST_VIDEO_INFO_WIDTH(video_info), GST_VIDEO_INFO_HEIGHT(video_info));
+}
+
 void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *result_image) {
     if (!upscaler || !upscaler->inference || !upscaler->inference->openvino_inference) {
-        // TODO:
+        // TODO: implement
         return;
     }
     upscaler->inference->openvino_inference->run(original_image, result_image);

@@ -101,6 +101,7 @@ static void gst_upscaler_class_init(GstUpScalerClass *klass) {
 static void gst_upscaler_init(GstUpScaler *upscaler) {
     GST_DEBUG_OBJECT(upscaler, "Upscaler element initialization");
 
+    upscaler->input_video_info = gst_video_info_new();
     upscaler->model = NULL;
     gst_upscaler_set_device(upscaler, DEFAULT_DEVICE);
     upscaler->silent = FALSE;
@@ -177,7 +178,11 @@ static gboolean gst_upscaler_set_caps(GstBaseTransform *transform, GstCaps *in_c
     GstUpScaler *upscaler = GST_UPSCALER(transform);
     GST_DEBUG_OBJECT(upscaler, "Caps setting in the process");
 
-    // TODO: implement method
+    if (!gst_video_info_from_caps(upscaler->input_video_info, in_caps)) {
+        GST_ERROR_OBJECT(upscaler, "Caps are invalid");
+        return FALSE;
+    }
+    set_input_video_size(upscaler, upscaler->input_video_info);
 
     return TRUE;
 }
@@ -209,6 +214,7 @@ static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuff
         return GST_BASE_TRANSFORM_FLOW_DROPPED;
     }
 
+    // TODO: remove hardcode
     guint super_resolution_size = 1920 * 1080 *3;
     GstMemory *result_image = gst_allocator_alloc(NULL, super_resolution_size, NULL);
     run_inference(upscaler, original_image, result_image);
