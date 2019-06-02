@@ -66,9 +66,8 @@ size_t get_blob_size(const Blob::Ptr &blob) {
     return dims[1] * dims[2] * dims[3];
 }
 
-void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
-    GstMapInfo info = {};
-    gst_memory_map(memory, &info, GST_MAP_WRITE);
+cv::Mat copy_blob_into_image(const Blob::Ptr &blob) {
+    cv::Mat result_image;
     auto blob_data = blob->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
 
     const auto &dims = blob->getTensorDesc().getDims();
@@ -77,19 +76,16 @@ void copy_blob_into_image(const Blob::Ptr &blob, GstMemory *memory) {
     size_t width = dims[3];
     size_t image_size = width * height;
 
-    std::vector<cv::Mat> imgPlanes = {
+    std::vector<cv::Mat> image_planes = {
         cv::Mat(height, width, CV_32FC1, blob_data),
         cv::Mat(height, width, CV_32FC1, &(blob_data[image_size])),
         cv::Mat(height, width, CV_32FC1, &(blob_data[image_size * 2]))
     };
 
-    cv::Mat resultImg;
-    cv::merge(imgPlanes, resultImg);
-    resultImg.convertTo(resultImg, CV_8UC3, 255);
+    cv::merge(image_planes, result_image);
+    result_image.convertTo(result_image, CV_8UC3, 255);
 
-    size_t buffer_size = resultImg.total() * resultImg.elemSize();
-    memcpy(static_cast<void*>(info.data), static_cast<void*>(resultImg.data), buffer_size);
-    gst_memory_unmap(memory, &info);
+    return result_image;
 }
 
 } // namespace
@@ -118,7 +114,7 @@ cv::Mat OpenVinoInference::resize_by_opencv(const GstMapInfo &image, size_t widt
     return resized_image;
 }
 
-void OpenVinoInference::run(GstMemory *original_image, GstMemory *result_image) {
+cv::Mat OpenVinoInference::run(GstMemory *original_image) {
     GstMapInfo image_map_info;
     cv::Mat input_image_mat;
 
@@ -141,7 +137,7 @@ void OpenVinoInference::run(GstMemory *original_image, GstMemory *result_image) 
 
     string output_layer_name = this->_outputs_info.begin()->first;
     Blob::Ptr output_blob = this->_infer_request.GetBlob(output_layer_name);
-    copy_blob_into_image(output_blob, result_image);
+    return copy_blob_into_image(output_blob);
 }
 
 InferenceFactory *create_openvino_inference(gchar *path_to_model_xml, GError **error) {
@@ -164,10 +160,23 @@ void set_input_video_size(GstUpScaler *upscaler, GstVideoInfo *video_info)
     upscaler->inference->openvino_inference->set_input_frame_size(GST_VIDEO_INFO_WIDTH(video_info), GST_VIDEO_INFO_HEIGHT(video_info));
 }
 
-void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *result_image) {
-    if (!upscaler || !upscaler->inference || !upscaler->inference->openvino_inference) {
-        // TODO: implement
-        return;
+GstMemory *run_inference(GstUpScaler *upscaler, GstMemory *original_image, GError **error) {
+    cv::Mat frame_after_infer;
+    GstMapInfo info = {};
+    size_t buffer_size;
+    GstMemory *gst_result_image;
+
+    try{
+        frame_after_infer = upscaler->inference->openvino_inference->run(original_image);
+        buffer_size = frame_after_infer.total() * frame_after_infer.elemSize();
+
+        gst_result_image = gst_allocator_alloc(NULL, buffer_size, NULL);
+        gst_memory_map(gst_result_image, &info, GST_MAP_WRITE);
+        memcpy(static_cast<void*>(info.data), static_cast<void*>(frame_after_infer.data), buffer_size);
+        gst_memory_unmap(gst_result_image, &info);
+    } catch (const std::exception &exc) {
+        g_set_error(error, 1, 1, "%s", exc.what());
     }
-    upscaler->inference->openvino_inference->run(original_image, result_image);
+
+    return gst_result_image;
 }

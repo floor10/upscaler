@@ -38,7 +38,7 @@ class OpenVinoInference {
     ~OpenVinoInference() = default;
 
     void set_input_frame_size(size_t width, size_t height);
-    void run(GstMemory *original_image, GstMemory *result_image);
+    cv::Mat run(GstMemory *original_image);
 };
 
 #else /* __cplusplus */
@@ -57,7 +57,7 @@ typedef struct _InferenceFactory {
 
 InferenceFactory *create_openvino_inference(gchar *path_to_model_xml, GError **error);
 void set_input_video_size(GstUpScaler *upscaler, GstVideoInfo *video_info);
-void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *result_image);
+GstMemory *run_inference(GstUpScaler *upscaler, GstMemory *original_image, GError **error);
 
 #ifdef __cplusplus
 } /* extern C */

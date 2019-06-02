@@ -214,13 +214,18 @@ static GstFlowReturn gst_upscaler_transform(GstBaseTransform *transform, GstBuff
         return GST_BASE_TRANSFORM_FLOW_DROPPED;
     }
 
-    // TODO: remove hardcode
-    guint super_resolution_size = 1920 * 1080 *3;
-    GstMemory *result_image = gst_allocator_alloc(NULL, super_resolution_size, NULL);
-    run_inference(upscaler, original_image, result_image);
+    GError *error = NULL;
+    GstMemory *result_image = run_inference(upscaler, original_image, &error);
     gst_buffer_replace_memory(output_buffer, 0, result_image);
 
     gst_memory_unref(original_image);
+
+    if (error)
+    {
+        GST_ELEMENT_ERROR(upscaler, RESOURCE, TOO_LAZY, ("Errors occurred during inference"),
+                          ("%s", error->message));
+        return GST_FLOW_ERROR;
+    } 
 
     return GST_FLOW_OK;
 }
