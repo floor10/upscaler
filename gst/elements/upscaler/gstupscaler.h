@@ -31,6 +31,7 @@ struct _GstUpScaler {
     GstBaseTransform base_upscaler;
 
     GstPad *sinkpad, *srcpad;
+    GstVideoInfo *input_video_info;
     gchar *model;
     gchar *device;
     GstUpscalerDevice device_type;

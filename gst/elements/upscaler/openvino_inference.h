@@ -20,6 +20,9 @@ const int BATCH_SIZE = 1;
 
 class OpenVinoInference {
   private:
+    size_t _input_frame_width;
+    size_t _input_frame_height;
+
     InferenceEngine::InferRequest _infer_request;
     InferenceEngine::InputsDataMap _inputs_info;
     InferenceEngine::OutputsDataMap _outputs_info;
@@ -34,7 +37,8 @@ class OpenVinoInference {
     OpenVinoInference(std::string path_to_model_xml);
     ~OpenVinoInference() = default;
 
-    void run(GstMemory *original_image, GstMemory *result_image);
+    void set_input_frame_size(size_t width, size_t height);
+    cv::Mat run(GstMemory *original_image);
 };
 
 #else /* __cplusplus */
@@ -52,7 +56,8 @@ typedef struct _InferenceFactory {
 } InferenceFactory;
 
 InferenceFactory *create_openvino_inference(gchar *path_to_model_xml, GError **error);
-void run_inference(GstUpScaler *upscaler, GstMemory *original_image, GstMemory *result_image);
+void set_input_video_size(GstUpScaler *upscaler, GstVideoInfo *video_info);
+GstMemory *run_inference(GstUpScaler *upscaler, GstMemory *original_image, GError **error);
 
 #ifdef __cplusplus
 } /* extern C */
