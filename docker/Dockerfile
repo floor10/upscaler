@@ -1,4 +1,3 @@
-
 FROM ubuntu:18.04
 
 RUN apt-get update \
@@ -55,6 +54,17 @@ RUN git clone https://github.com/opencv/dldt &&\
     mkdir inference-engine/build && cd inference-engine/build && \
     cmake .. && make -j $(nproc)
 
+RUN echo "\
+/dldt/inference-engine/bin/intel64/Release/lib\n\
+/dldt/inference-engine/temp/gna/linux/lib\n\
+/dldt/inference-engine/temp/omp/lib\n\
+/dldt/inference-engine/temp/tbb/lib\n\
+/dldt/inference-engine/thirdparty/clDNN/common/intel_ocl_icd/6.3/linux/Release/bin/x64\n\
+/dldt/inference-engine/temp/opencv_4.1.0_ubuntu18\n\
+/dldt/inference-engine/temp/opencv_4.1.0_ubuntu18/lib" > /etc/ld.so.conf.d/opencv-dldt-gst.conf && ldconfig
+
+ENV OpenCV_DIR=/dldt/inference-engine/temp/opencv_4.1.0_ubuntu18/cmake
+ENV InferenceEngine_DIR=/dldt/inference-engine/build
 
 COPY . /usr/share/sources/upscaler
 
