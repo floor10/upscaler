@@ -123,10 +123,10 @@ ENV InferenceEngine_DIR=/opt/intel/dldt/inference-engine/share
 RUN useradd -ms /bin/bash user
 USER user
 
-COPY . /home/user/upscaler
+COPY --chown=user:user . /home/user/upscaler
 
-WORKDIR /home/user/upscaler/build
+WORKDIR /home/user/upscaler
 
-RUN cmake .. && make -j $(nproc)
+RUN mkdir build && cd build && cmake .. && make -j $(nproc)
 
 ENV GST_PLUGIN_PATH=/home/user/upscaler/build/gst/elements
