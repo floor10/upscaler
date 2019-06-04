@@ -15,3 +15,7 @@
 | ![Super Resolution output](https://user-images.githubusercontent.com/26468927/58763742-b5384400-8567-11e9-90e3-e4e02923ea4d.png) |
 | :--: |
 | *Image 3: Super resolution* |
+
+## Pipeline diagram
+
+![Super resolution pipeline diagram](https://user-images.githubusercontent.com/26468927/58761835-08eb6300-8551-11e9-8434-fa47186593c2.png)
