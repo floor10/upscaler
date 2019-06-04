@@ -42,11 +42,6 @@ RUN apt-get update \
             libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive \
-        apt-get install -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN git clone https://github.com/opencv/dldt &&\
     cd dldt && \
     git checkout 2019_R1.1 && \
