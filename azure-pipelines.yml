@@ -6,7 +6,7 @@
 pool:
   vmImage: 'ubuntu-latest'
 
-target:
+trigger:
   - master
 
 variables:
