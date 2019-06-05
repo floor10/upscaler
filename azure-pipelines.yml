@@ -8,8 +8,6 @@ pool:
 
 target:
   - master
-pr:
-  - master
 
 variables:
   imageId: floor10/upscaler
