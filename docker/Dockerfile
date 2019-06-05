@@ -59,8 +59,8 @@ RUN git clone https://github.com/opencv/dldt && cd dldt && \
     mv ./src                            /opt/intel/dldt/inference-engine/ && \
     mv ./build/share                    /opt/intel/dldt/inference-engine/ && \
     mv ./temp/opencv_4.1.0_ubuntu18     /opt/intel/dldt/inference-engine/external/opencv && \
-    mv ./temp/gna/linux/lib             /opt/intel/dldt/inference-engine/external/gna/ && \
-    mv ./temp/tbb/lib                   /opt/intel/dldt/inference-engine/external/tbb/ && \
+    mv ./temp/gna/linux                 /opt/intel/dldt/inference-engine/external/gna/ && \
+    mv ./temp/tbb                       /opt/intel/dldt/inference-engine/external/tbb/ && \
     \
     cd /tmp && rm -rf dldt
 
