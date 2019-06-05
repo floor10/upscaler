@@ -39,18 +39,14 @@ RUN git clone https://github.com/opencv/dldt && cd dldt && \
     git checkout 2019_R1.1 && git submodule update --init --recursive && \
     mkdir inference-engine/build && cd inference-engine/build && \
     cmake \
-        -DENABLE_VALIDATION_SET=OFF \
-        -DENABLE_SAMPLE_CORE=OFF \
         -DENABLE_MKL_DNN=ON \
         -DENABLE_CLDNN=ON \
         .. && \
     make -j $(nproc) && \
-    \
-    mkdir -p /opt/intel/dldt/inference-engine/lib && \
-    mkdir -p /opt/intel/dldt/inference-engine/external/gna && \
-    mkdir -p /opt/intel/dldt/inference-engine/external/tbb && \
-    mkdir -p /opt/intel/dldt/inference-engine/thirdparty/intel_ocl_icd && \
     cd /tmp/dldt/inference-engine && \
+    mkdir -p /opt/intel/dldt/inference-engine/lib && \
+    mkdir -p /opt/intel/dldt/inference-engine/thirdparty/intel_ocl_icd && \
+    mkdir -p /opt/intel/dldt/inference-engine/external && \
     \
     mv ./thirdparty/clDNN/common/intel_ocl_icd/6.3/linux/Release/bin/x64 \
                                         /opt/intel/dldt/inference-engine/thirdparty/intel_ocl_icd/lib &&\
@@ -59,8 +55,8 @@ RUN git clone https://github.com/opencv/dldt && cd dldt && \
     mv ./src                            /opt/intel/dldt/inference-engine/ && \
     mv ./build/share                    /opt/intel/dldt/inference-engine/ && \
     mv ./temp/opencv_4.1.0_ubuntu18     /opt/intel/dldt/inference-engine/external/opencv && \
-    mv ./temp/gna/linux                 /opt/intel/dldt/inference-engine/external/gna/ && \
-    mv ./temp/tbb                       /opt/intel/dldt/inference-engine/external/tbb/ && \
+    mv ./temp/gna/linux                 /opt/intel/dldt/inference-engine/external/gna && \
+    mv ./temp/tbb                       /opt/intel/dldt/inference-engine/external/ && \
     \
     cd /tmp && rm -rf dldt
 
