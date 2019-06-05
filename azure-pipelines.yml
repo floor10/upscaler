@@ -6,6 +6,8 @@
 pool:
   vmImage: 'ubuntu-latest'
 
+target:
+  - master
 pr:
   - master
 
