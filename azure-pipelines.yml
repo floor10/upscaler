@@ -11,10 +11,9 @@ pr:
 
 variables:
   imageId: floor10/upscaler
-#  imageTag: pr_$(System.PullRequest.PullRequestId)
 
 steps:
-- script: docker build -t $(imageId):pr_$(System.PullRequest.PullRequestId) -f docker/Dockerfile .
+- script: docker build -t $(imageId):pr_validation -f docker/Dockerfile .
   displayName: 'Build of Pull request'
 
 # - script: |
